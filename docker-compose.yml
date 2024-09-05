@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: ./docker/nginx/Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./src:/var/www/html
+      - ./config/nginx:/etc/nginx/conf.d
+      - ./config/nginx/snippets:/etc/nginx/snippets
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - php
+    container_name: opencart_nginx
+    restart: always
+    networks:
+      - opencart_network
+
+  php:
+    build:
+      context: .
+      dockerfile: ./docker/php/Dockerfile
+    volumes:
+      - ./src:/var/www/html
+      - ./logs/php-fpm:/var/log/php-fpm
+    environment:
+      - DB_HOST=db
+      - DB_USER=opencart
+      - DB_PASSWORD=opencart_password
+      - DB_NAME=opencart
+    container_name: opencart_php
+    restart: always
+    networks:
+      - opencart_network
+
+  memcached:
+    image: memcached:1.6
+    ports:
+      - "11211:11211"
+    container_name: opencart_memcached
+    restart: always
+    networks:
+      - opencart_network
+
+  db:
+    image: mariadb:10.5
+    environment:
+      MYSQL_ROOT_PASSWORD: chiron
+      MYSQL_DATABASE: opencart
+      MYSQL_USER: opencart
+      MYSQL_PASSWORD: opencart_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+      - ./logs/mysql:/var/log/mysql/
+    container_name: opencart_db
+    restart: always
+    networks:
+      - opencart_network
+
+networks:
+  opencart_network:
+    driver: bridge
